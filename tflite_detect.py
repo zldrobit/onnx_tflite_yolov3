@@ -5,7 +5,12 @@ from models import *  # set ONNX_EXPORT in models.py
 from utils.datasets import *
 from utils.utils import *
 
+import onnxruntime as rt
 import cv2
+import time
+
+import numpy as np
+import tensorflow as tf
 
 
 def detect(save_txt=False, save_img=False):
@@ -21,38 +26,51 @@ def detect(save_txt=False, save_img=False):
     os.makedirs(out)  # make new output folder
 
     # Initialize model
-    model = Darknet(opt.cfg, img_size)
+    # model = Darknet(opt.cfg, img_size)
+    # sess = rt.InferenceSession("weights/export.onnx")
+    # input_name = sess.get_inputs()[0].name
+
+    # Load TFLite model and allocate tensors.
+    interpreter = tf.lite.Interpreter(model_path="weights/yolov3.tflite")
+    # interpreter = tf.lite.Interpreter(model_path="weights/detect.tflite")
+    interpreter.allocate_tensors()
+
+    # Get input and output tensors.
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
 
     # Load weights
-    attempt_download(weights)
-    if weights.endswith('.pt'):  # pytorch format
-        model.load_state_dict(torch.load(weights, map_location=device)['model'])
-    else:  # darknet format
-        _ = load_darknet_weights(model, weights)
+    # attempt_download(weights)
+    # if weights.endswith('.pt'):  # pytorch format
+    #     model.load_state_dict(torch.load(weights, map_location=device)['model'])
+    # else:  # darknet format
+    #     _ = load_darknet_weights(model, weights)
 
     # Second-stage classifier
     classify = False
     if classify:
         modelc = torch_utils.load_classifier(name='resnet101', n=2)  # initialize
-        modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model'])  # load weights modelc.to(device).eval()
+        modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model'])  # load weights
+        modelc.to(device).eval()
 
     # Fuse Conv2d + BatchNorm2d layers
     # model.fuse()
 
     # Eval mode
-    model.to(device).eval()
+    # model.to(device).eval()
 
     # Export mode
-    if ONNX_EXPORT:
-        img = torch.zeros((1, 3) + img_size)  # (1, 3, 320, 192)
-        torch.onnx.export(model, img, 'weights/export.onnx', verbose=True, opset_version=9)
+    # if ONNX_EXPORT:
+    #     img = torch.zeros((1, 3) + img_size)  # (1, 3, 320, 192)
+    #     torch.onnx.export(model, img, 'weights/export.onnx', verbose=False, opset_version=10)
+    #     # torch.onnx.export(model, img, 'weights/export.onnx', verbose=False, opset_version=11)
 
-        # Validate exported model
-        import onnx
-        model = onnx.load('weights/export.onnx')  # Load the ONNX model
-        onnx.checker.check_model(model)  # Check that the IR is well formed
-        # print(onnx.helper.printable_graph(model.graph))  # Print a human readable representation of the graph
-        return
+    #     # Validate exported model
+    #     import onnx
+    #     model = onnx.load('weights/export.onnx')  # Load the ONNX model
+    #     onnx.checker.check_model(model)  # Check that the IR is well formed
+    #     print(onnx.helper.printable_graph(model.graph))  # Print a human readable representation of the graph
+    #     return
 
     # Half precision
     half = half and device.type != 'cpu'  # half precision only supported on CUDA
@@ -78,21 +96,38 @@ def detect(save_txt=False, save_img=False):
     for path, img, im0s, vid_cap in dataset:
         t = time.time()
 
-        # Get detections
-        img = torch.from_numpy(img).to(device)
-        if img.ndimension() == 3:
-            img = img.unsqueeze(0)
-        pred = model(img)[0]
+        img0 = img
+        start = time.time()
+        for i in range(10):
+            # Get detections
+            # img = torch.from_numpy(img).to(device)
+            # if img.ndimension() == 3:
+            #     img = img.unsqueeze(0)
+            # pred = model(img)[0]
+            input_shape = input_details[0]['shape']
+            print("input_shape", input_shape)
 
-        if opt.half:
-            pred = pred.float()
+            img = img0
+            img = img[None, :, :, :]
+            input_data = img.astype(np.float32)
+            interpreter.set_tensor(input_details[0]['index'], input_data)
+            interpreter.invoke()
+            output_data = interpreter.get_tensor(output_details[0]['index'])
+            print("output_data.shape", output_data.shape)
+            pred = torch.Tensor(output_data)
+            # pred = torch.Tensor(pred)
+            if opt.half:
+                pred = pred.float()
 
-        # Apply NMS
-        pred = non_max_suppression(pred, opt.conf_thres, opt.nms_thres)
+            # Apply NMS
+            pred = non_max_suppression(pred, opt.conf_thres, opt.nms_thres)
 
-        # Apply
-        if classify:
-            pred = apply_classifier(pred, modelc, img, im0s)
+            # Apply
+            if classify:
+                pred = apply_classifier(pred, modelc, img, im0s)
+
+        end = time.time()
+        print("avg time:", (end - start) / 10)
 
         # Process detections
         for i, det in enumerate(pred):  # detections per image
@@ -103,6 +138,7 @@ def detect(save_txt=False, save_img=False):
 
             save_path = str(Path(out) / Path(p).name)
             s += '%gx%g ' % img.shape[2:]  # print string
+            # print("len(det)", len(det))
             if det is not None and len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
@@ -173,3 +209,4 @@ if __name__ == '__main__':
 
     with torch.no_grad():
         detect()
+

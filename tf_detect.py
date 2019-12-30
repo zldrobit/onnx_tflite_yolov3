@@ -5,8 +5,10 @@ from models import *  # set ONNX_EXPORT in models.py
 from utils.datasets import *
 from utils.utils import *
 
+import onnxruntime as rt
 import cv2
-
+import time
+import tensorflow as tf
 
 def detect(save_txt=False, save_img=False):
     # img_size = (320, 192) if ONNX_EXPORT else opt.img_size  # (320, 192) or (416, 256) or (608, 352) for (height, width)
@@ -21,38 +23,56 @@ def detect(save_txt=False, save_img=False):
     os.makedirs(out)  # make new output folder
 
     # Initialize model
-    model = Darknet(opt.cfg, img_size)
+    # model = Darknet(opt.cfg, img_size)
+
+    graph_def = 'weights/yolov3.pb'
+
+    with tf.gfile.GFile(graph_def, "rb") as f:
+        restored_graph_def = tf.GraphDef()
+        restored_graph_def.ParseFromString(f.read())
+
+    # for node in restored_graph_def.node:
+    #     if 'transpose' in node.name.lower():
+    #         print(node.name, node.op)
+    tf.import_graph_def(
+        restored_graph_def,
+        input_map=None,
+        return_elements=None,
+        name="")
+
 
     # Load weights
-    attempt_download(weights)
-    if weights.endswith('.pt'):  # pytorch format
-        model.load_state_dict(torch.load(weights, map_location=device)['model'])
-    else:  # darknet format
-        _ = load_darknet_weights(model, weights)
+    # attempt_download(weights)
+    # if weights.endswith('.pt'):  # pytorch format
+    #     model.load_state_dict(torch.load(weights, map_location=device)['model'])
+    # else:  # darknet format
+    #     _ = load_darknet_weights(model, weights)
 
     # Second-stage classifier
     classify = False
     if classify:
         modelc = torch_utils.load_classifier(name='resnet101', n=2)  # initialize
-        modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model'])  # load weights modelc.to(device).eval()
+        modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model'])  # load weights
+        modelc.to(device).eval()
 
     # Fuse Conv2d + BatchNorm2d layers
     # model.fuse()
 
     # Eval mode
-    model.to(device).eval()
+    # model.to(device).eval()
 
     # Export mode
-    if ONNX_EXPORT:
-        img = torch.zeros((1, 3) + img_size)  # (1, 3, 320, 192)
-        torch.onnx.export(model, img, 'weights/export.onnx', verbose=True, opset_version=9)
+    # if ONNX_EXPORT:
+    #     img = torch.zeros((1, 3) + img_size)  # (1, 3, 320, 192)
+    #     torch.onnx.export(model, img, 'weights/export.onnx', verbose=False, opset_version=10)
+    #     # torch.onnx.export(model, img, 'weights/export.onnx', verbose=False, opset_version=11)
 
-        # Validate exported model
-        import onnx
-        model = onnx.load('weights/export.onnx')  # Load the ONNX model
-        onnx.checker.check_model(model)  # Check that the IR is well formed
-        # print(onnx.helper.printable_graph(model.graph))  # Print a human readable representation of the graph
-        return
+    #     # Validate exported model
+    #     import onnx
+    #     model = onnx.load('weights/export.onnx')  # Load the ONNX model
+    #     onnx.checker.check_model(model)  # Check that the IR is well formed
+    #     print(onnx.helper.printable_graph(model.graph))  # Print a human readable representation of the graph
+    #     return
 
     # Half precision
     half = half and device.type != 'cpu'  # half precision only supported on CUDA
@@ -75,14 +95,25 @@ def detect(save_txt=False, save_img=False):
 
     # Run inference
     t0 = time.time()
+    sess = tf.Session()
     for path, img, im0s, vid_cap in dataset:
         t = time.time()
 
+        img0 = img
+        start = time.time()
+        # for i in range(1000):
+
         # Get detections
-        img = torch.from_numpy(img).to(device)
-        if img.ndimension() == 3:
-            img = img.unsqueeze(0)
-        pred = model(img)[0]
+        # img = torch.from_numpy(img).to(device)
+        # if img.ndimension() == 3:
+        #     img = img.unsqueeze(0)
+        # pred = model(img)[0]
+        img = img0
+        img = np.transpose(img, [1, 2, 0])
+        img = img[None, :, :, :]
+        img = np.transpose(img, [0, 3, 1, 2])
+        pred = sess.run("concat_84:0", feed_dict={'input.1:0':img})
+        pred = torch.Tensor(pred)
 
         if opt.half:
             pred = pred.float()
@@ -94,6 +125,10 @@ def detect(save_txt=False, save_img=False):
         if classify:
             pred = apply_classifier(pred, modelc, img, im0s)
 
+        # end = time.time()
+        # print("avg time:", (end - start) / 1000)
+        
+
         # Process detections
         for i, det in enumerate(pred):  # detections per image
             if webcam:  # batch_size >= 1
@@ -103,6 +138,7 @@ def detect(save_txt=False, save_img=False):
 
             save_path = str(Path(out) / Path(p).name)
             s += '%gx%g ' % img.shape[2:]  # print string
+            # print("len(det)", len(det))
             if det is not None and len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
@@ -173,3 +209,5 @@ if __name__ == '__main__':
 
     with torch.no_grad():
         detect()
+
+

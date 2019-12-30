@@ -5,8 +5,9 @@ from models import *  # set ONNX_EXPORT in models.py
 from utils.datasets import *
 from utils.utils import *
 
+import onnxruntime as rt
 import cv2
-
+import time
 
 def detect(save_txt=False, save_img=False):
     # img_size = (320, 192) if ONNX_EXPORT else opt.img_size  # (320, 192) or (416, 256) or (608, 352) for (height, width)
@@ -21,43 +22,16 @@ def detect(save_txt=False, save_img=False):
     os.makedirs(out)  # make new output folder
 
     # Initialize model
-    model = Darknet(opt.cfg, img_size)
-
-    # Load weights
-    attempt_download(weights)
-    if weights.endswith('.pt'):  # pytorch format
-        model.load_state_dict(torch.load(weights, map_location=device)['model'])
-    else:  # darknet format
-        _ = load_darknet_weights(model, weights)
+    # model = Darknet(opt.cfg, img_size)
+    sess = rt.InferenceSession("weights/export.onnx")
+    input_name = sess.get_inputs()[0].name
 
     # Second-stage classifier
     classify = False
     if classify:
         modelc = torch_utils.load_classifier(name='resnet101', n=2)  # initialize
-        modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model'])  # load weights modelc.to(device).eval()
-
-    # Fuse Conv2d + BatchNorm2d layers
-    # model.fuse()
-
-    # Eval mode
-    model.to(device).eval()
-
-    # Export mode
-    if ONNX_EXPORT:
-        img = torch.zeros((1, 3) + img_size)  # (1, 3, 320, 192)
-        torch.onnx.export(model, img, 'weights/export.onnx', verbose=True, opset_version=9)
-
-        # Validate exported model
-        import onnx
-        model = onnx.load('weights/export.onnx')  # Load the ONNX model
-        onnx.checker.check_model(model)  # Check that the IR is well formed
-        # print(onnx.helper.printable_graph(model.graph))  # Print a human readable representation of the graph
-        return
-
-    # Half precision
-    half = half and device.type != 'cpu'  # half precision only supported on CUDA
-    if half:
-        model.half()
+        modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model'])  # load weights
+        modelc.to(device).eval()
 
     # Set Dataloader
     vid_path, vid_writer = None, None
@@ -78,21 +52,30 @@ def detect(save_txt=False, save_img=False):
     for path, img, im0s, vid_cap in dataset:
         t = time.time()
 
-        # Get detections
-        img = torch.from_numpy(img).to(device)
-        if img.ndimension() == 3:
-            img = img.unsqueeze(0)
-        pred = model(img)[0]
+        img0 = img
+        start = time.time()
+        for i in range(100):
+            # Get detections
+            # img = torch.from_numpy(img).to(device)
+            # if img.ndimension() == 3:
+            #     img = img.unsqueeze(0)
+            # pred = model(img)[0]
+            img = img0
+            img = img[None, :, :, :]
+            pred = sess.run(None, {input_name: img.astype(np.float32)})[0]
+            pred = torch.Tensor(pred)
+            if opt.half:
+                pred = pred.float()
 
-        if opt.half:
-            pred = pred.float()
+            # Apply NMS
+            pred = non_max_suppression(pred, opt.conf_thres, opt.nms_thres)
 
-        # Apply NMS
-        pred = non_max_suppression(pred, opt.conf_thres, opt.nms_thres)
+            # Apply
+            if classify:
+                pred = apply_classifier(pred, modelc, img, im0s)
 
-        # Apply
-        if classify:
-            pred = apply_classifier(pred, modelc, img, im0s)
+        end = time.time()
+        print("avg time:", (end - start) / 100)
 
         # Process detections
         for i, det in enumerate(pred):  # detections per image
@@ -103,6 +86,7 @@ def detect(save_txt=False, save_img=False):
 
             save_path = str(Path(out) / Path(p).name)
             s += '%gx%g ' % img.shape[2:]  # print string
+            # print("len(det)", len(det))
             if det is not None and len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()

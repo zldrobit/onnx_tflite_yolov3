@@ -1,10 +1,9 @@
 import torch.nn.functional as F
-
 from utils.google_utils import *
 from utils.parse_config import *
 from utils.utils import *
 
-ONNX_EXPORT = False
+ONNX_EXPORT = True
 
 
 def create_modules(module_defs, img_size, arc):
@@ -167,60 +166,47 @@ class YOLOLayer(nn.Module):
             if (self.nx, self.ny) != (nx, ny):
                 create_grids(self, img_size, (nx, ny), p.device, p.dtype)
 
-        # p.view(bs, 255, 13, 13) -- > (bs, 3, 13, 13, 85)  # (bs, anchors, grid, grid, classes + xywh)
-        p = p.view(bs, self.na, self.nc + 5, self.ny, self.nx).permute(0, 1, 3, 4, 2).contiguous()  # prediction
+        # Avoid 5-D transpose
+        p = (p.view(bs, self.na, self.nc + 5, self.nx * self.ny).permute(0, 1, 3, 2)
+                .view(bs, self.na, self.ny * self.nx, self.nc + 5).contiguous())
 
         if self.training:
             return p
-
-        elif ONNX_EXPORT:
-            # Constants CAN NOT BE BROADCAST, ensure correct shape!
-            m = self.na * self.nx * self.ny
-            ngu = self.ng.repeat((1, m, 1))
-            grid_xy = self.grid_xy.repeat((1, self.na, 1, 1, 1)).view(1, m, 2)
-            anchor_wh = self.anchor_wh.repeat((1, 1, self.nx, self.ny, 1)).view(1, m, 2) / ngu
-
-            p = p.view(m, 5 + self.nc)
-            xy = torch.sigmoid(p[..., 0:2]) + grid_xy[0]  # x, y
-            wh = torch.exp(p[..., 2:4]) * anchor_wh[0]  # width, height
-            p_conf = torch.sigmoid(p[:, 4:5])  # Conf
-            p_cls = F.softmax(p[:, 5:5 + self.nc], 1) * p_conf  # SSD-like conf
-            return torch.cat((xy / ngu[0], wh, p_conf, p_cls), 1).t()
-
-            # p = p.view(1, m, 5 + self.nc)
-            # xy = torch.sigmoid(p[..., 0:2]) + grid_xy  # x, y
-            # wh = torch.exp(p[..., 2:4]) * anchor_wh  # width, height
-            # p_conf = torch.sigmoid(p[..., 4:5])  # Conf
-            # p_cls = p[..., 5:5 + self.nc]
-            # # Broadcasting only supported on first dimension in CoreML. See onnx-coreml/_operators.py
-            # # p_cls = F.softmax(p_cls, 2) * p_conf  # SSD-like conf
-            # p_cls = torch.exp(p_cls).permute((2, 1, 0))
-            # p_cls = p_cls / p_cls.sum(0).unsqueeze(0) * p_conf.permute((2, 1, 0))  # F.softmax() equivalent
-            # p_cls = p_cls.permute(2, 1, 0)
-            # return torch.cat((xy / ngu, wh, p_conf, p_cls), 2).squeeze().t()
-
-        else:  # inference
-            # s = 1.5  # scale_xy  (pxy = pxy * s - (s - 1) / 2)
+        else:  # inference or ONNX_EXPORT
             io = p.clone()  # inference output
-            io[..., 0:2] = torch.sigmoid(io[..., 0:2]) + self.grid_xy  # xy
-            io[..., 2:4] = torch.exp(io[..., 2:4]) * self.anchor_wh  # wh yolo method
-            # io[..., 2:4] = ((torch.sigmoid(io[..., 2:4]) * 2) ** 3) * self.anchor_wh  # wh power method
-            io[..., :4] *= self.stride
+            xy = (torch.sigmoid(io[..., 0:2]) + self.grid_xy) * self.stride  # xy
+            wh = (torch.exp(io[..., 2:4]) * self.anchor_wh) * self.stride  # wh yolo method
 
             if 'default' in self.arc:  # seperate obj and cls
-                torch.sigmoid_(io[..., 4:])
+                # torch.sigmoid_(io[..., 4:])
+                p_conf = torch.sigmoid(io[..., 4:5])
+                p_cls = torch.sigmoid(io[..., 5:])
             elif 'BCE' in self.arc:  # unified BCE (80 classes)
-                torch.sigmoid_(io[..., 5:])
+                # torch.sigmoid_(io[..., 5:])
                 io[..., 4] = 1
+                p_conf = io[..., 4:5]
+                p_conf = 1
+                p_cls = torch.sigmoid(io[..., 5:])
             elif 'CE' in self.arc:  # unified CE (1 background + 80 classes)
                 io[..., 4:] = F.softmax(io[..., 4:], dim=4)
                 io[..., 4] = 1
+                p_conf_cls = F.softmax(io[..., 4:], dim=4)
+                p_conf = io[..., 4:5]
+                p_conf = 1
+                p_cls = p_conf_cls[..., 5:]
 
             if self.nc == 1:
                 io[..., 5] = 1  # single-class model https://github.com/ultralytics/yolov3/issues/235
+                p_conf = io[..., 4:5]
+                p_cls0 = io[..., 5:6]
+                p_cls0 = 1
+                p_cls = torch.cat(p_cls0, io[..., 6:], -1)
 
             # reshape from [1, 3, 13, 13, 85] to [1, 507, 85]
-            return io.view(bs, -1, 5 + self.nc), p
+            # return io.view(bs, -1, 5 + self.nc), p
+
+            res = torch.cat((xy, wh, p_conf, p_cls), -1)
+            return res.view(bs, -1, 5 + self.nc), p.view(bs, self.na, self.ny, self.nx, self.nc + 5)
 
 
 class Darknet(nn.Module):
@@ -266,12 +252,13 @@ class Darknet(nn.Module):
 
         if self.training:
             return output
-        elif ONNX_EXPORT:
-            output = torch.cat(output, 1)  # cat 3 layers 85 x (507, 2028, 8112) to 85 x 10647
-            nc = self.module_list[self.yolo_layers[0]].nc  # number of classes
-            return output[5:5 + nc].t(), output[0:4].t()  # ONNX scores, boxes
         else:
             io, p = list(zip(*output))  # inference output, training output
+            # print("torch.cat(io, 1).shape", torch.cat(io, 1).shape)
+            # print(torch.cat(io, 1))
+            for _io in io:
+                print("_io.shape", _io.shape)
+            # print("p.shape", p.shape)
             return torch.cat(io, 1), p
 
     def fuse(self):
@@ -302,11 +289,11 @@ def create_grids(self, img_size=416, ng=(13, 13), device='cpu', type=torch.float
 
     # build xy offsets
     yv, xv = torch.meshgrid([torch.arange(ny), torch.arange(nx)])
-    self.grid_xy = torch.stack((xv, yv), 2).to(device).type(type).view((1, 1, ny, nx, 2))
+    self.grid_xy = torch.stack((xv, yv), 2).to(device).type(type).view((1, 1, ny * nx, 2))
 
     # build wh gains
     self.anchor_vec = self.anchors.to(device) / self.stride
-    self.anchor_wh = self.anchor_vec.view(1, self.na, 1, 1, 2).to(device).type(type)
+    self.anchor_wh = self.anchor_vec.view(1, self.na, 1, 2).to(device).type(type)
     self.ng = torch.Tensor(ng).to(device)
     self.nx = nx
     self.ny = ny
