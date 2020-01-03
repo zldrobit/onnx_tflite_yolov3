@@ -56,7 +56,10 @@ Now, you can run `tflite_detect.py` to detect objects in an image.
 - **TF Lite inference, detection and debug:** `tflite_infer.py`, `tflite_detect.py` 
 and `tflite_debug.py`.
 
+## Known Issues
+- **The conversion code does not work with tensorflow==1.14.0:** Running prep.py cause protobuf error (Channel order issue in Conv2D).
+
 ## Acknowledgement
 We borrow PyTorch code from [ultralytics/yolov3](https://github.com/ultralytics/yolov3), 
-and TensorFlow low-level API conversion codes from [paulbauriegel/tensorflow-tools](https://github.com/paulbauriegel/tensorflow-tools).
+and TensorFlow low-level API conversion code from [paulbauriegel/tensorflow-tools](https://github.com/paulbauriegel/tensorflow-tools).
   
