@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 
-graph_def = 'weights/manual_export.pb'
+graph_def = 'weights/yolov3.pb'
 
 with tf.gfile.GFile(graph_def, "rb") as f:
     restored_graph_def = tf.GraphDef()
@@ -18,7 +18,7 @@ tf.import_graph_def(
     return_elements=None,
     name="")
 
-img = cv2.imread('data/dog.jpg')
+img = cv2.imread('data/samples/bus.jpg')
 img = cv2.resize(img, (416, 416))
 img = img[None, :, :, :]
 img = np.transpose(img, [0, 3, 1, 2])
