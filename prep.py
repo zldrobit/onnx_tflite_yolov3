@@ -74,7 +74,8 @@ with tf.Session() as sess:
         # Int32 Add operation
         # atts['T'].CopyFrom(tf.AttrValue(type=3))
         # atts['T'] = tf.AttrValue(type=3)
-        atts['T'].type = 3
+        # atts['T'].type = 3
+        atts['T'].type = tf.int32
 
         # Create new Operation
         op = sess.graph.create_op(op_type=n_org.type, inputs=inp_tens, name=n_org.name+'_new', attrs=atts) 
@@ -108,7 +109,8 @@ with tf.Session() as sess:
 
         # Get Attributes
         atts = n_org.node_def.attr
-        atts['Tshape'].type = 3
+        # atts['Tshape'].type = 3
+        atts['Tshape'].type = tf.int32
 
         # Create new Operation
         op = sess.graph.create_op(op_type=n_org.type, inputs=org_inp_tens, name=n_org.name+'_new', attrs=atts) 
