@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow.python.tools import optimize_for_inference_lib
+from tensorflow.core.framework import types_pb2
 graph_def_file = "weights/yolov3.pb"
 
 import pdb
@@ -74,9 +75,10 @@ with tf.Session() as sess:
         # Int32 Add operation
         # atts['T'].CopyFrom(tf.AttrValue(type=3))
         # atts['T'] = tf.AttrValue(type=3)
-        # atts['T'].type = tf.int32
         # atts['T'].type does not accept DType
-        atts['T'].type = 3
+        # atts['T'].type = tf.int32
+        # atts['T'].type = 3
+        atts['T'].type = types_pb2.DT_INT32
         
 
         # Create new Operation
@@ -111,9 +113,10 @@ with tf.Session() as sess:
 
         # Get Attributes
         atts = n_org.node_def.attr
-        # atts['Tshape'].type = tf.int32
         # atts['T'].type does not accept DType
-        atts['Tshape'].type = 3
+        # atts['Tshape'].type = tf.int32
+        # atts['Tshape'].type = 3
+        atts['Tshape'].type = types_pb2.DT_INT32
 
         # Create new Operation
         op = sess.graph.create_op(op_type=n_org.type, inputs=org_inp_tens, name=n_org.name+'_new', attrs=atts) 
