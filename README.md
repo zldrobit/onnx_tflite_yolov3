@@ -60,7 +60,7 @@ and `tflite_debug.py`.
 - **The conversion code does not work with tensorflow==1.14.0:** Running prep.py cause protobuf error (Channel order issue in Conv2D).
 
 ## TODO
-- [] **support quantized model**
+- [ ] **support quantized model**
 
 ## Acknowledgement
 We borrow PyTorch code from [ultralytics/yolov3](https://github.com/ultralytics/yolov3), 
