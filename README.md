@@ -55,7 +55,7 @@ Now, you can run `python3 tflite_detect.py` to detect objects in an image.
 
 ## Quantization
 - **1. Install flatbuffers:**
-Please refer to [flatbuffers](google.github.io/flatbuffers/flatbuffers_guide_building.html).
+Please refer to [flatbuffers](https://google.github.io/flatbuffers/flatbuffers_guide_building.html).
 
 - **2. Download TFLite schema:**
 ```
