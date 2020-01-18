@@ -1,5 +1,6 @@
 import argparse
 from sys import platform
+import sys
 
 from models import *  # set ONNX_EXPORT in models.py
 from utils.datasets import *
@@ -31,8 +32,7 @@ def detect(save_txt=False, save_img=False):
     # input_name = sess.get_inputs()[0].name
 
     # Load TFLite model and allocate tensors.
-    interpreter = tf.lite.Interpreter(model_path="weights/yolov3.tflite")
-    # interpreter = tf.lite.Interpreter(model_path="weights/detect.tflite")
+    interpreter = tf.lite.Interpreter(model_path=opt.weights)
     interpreter.allocate_tensors()
 
     # Get input and output tensors.
@@ -194,7 +194,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--cfg', type=str, default='cfg/yolov3-spp.cfg', help='cfg file path')
     parser.add_argument('--data', type=str, default='data/coco.data', help='coco.data file path')
-    parser.add_argument('--weights', type=str, default='weights/yolov3-spp.weights', help='path to weights file')
+    parser.add_argument('--weights', type=str, default='weights/yolov3_quant.tflite', help='path to weights file')
     parser.add_argument('--source', type=str, default='data/samples', help='source')  # input file/folder, 0 for webcam
     parser.add_argument('--output', type=str, default='output', help='output folder')  # output folder
     parser.add_argument('--img-size', type=int, default=416, help='inference size (pixels)')

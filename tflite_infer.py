@@ -1,8 +1,10 @@
 import numpy as np
 import tensorflow as tf
+import sys
 
 # Load TFLite model and allocate tensors.
-interpreter = tf.lite.Interpreter(model_path="weights/yolov3.tflite")
+model_path = sys.argv[1] if len(sys.argv) > 1 else "weights/yolov3_quant.tflite"
+interpreter = tf.lite.Interpreter(model_path=model_path)
 interpreter.allocate_tensors()
 
 # Get input and output tensors.
