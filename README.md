@@ -72,15 +72,15 @@ toco --graph_def_file weights/yolov3_prep.pb \
 The output file is `weights/yolov3_quant.tflite`.
 
 - **4. Convert tflite -> json:**
-`flatc -t --strict-json --defaults-json -o weights schema.fbs  -- weights/yolov3_quant.tflite`
+```flatc -t --strict-json --defaults-json -o weights schema.fbs  -- weights/yolov3_quant.tflite```
 The output file is `weights/yolov3_quant.json`.
 
 - **5. Fix ReshapeOptions:**
-`python3 fix_reshape.py`
+```python3 fix_reshape.py```
 The output file is `weights/yolov3_quant_fix_reshape.json`.
 
 - **6. Convert json -> tflite:**
-`flatc -b -o weights schema.fbs weights/yolov3_quant_fix_reshape.json`
+```flatc -b -o weights schema.fbs weights/yolov3_quant_fix_reshape.json```
 The output file is `weights/yolov3_quant_fix_reshape.tflite`.
 Now, you can run `python3 tflite_detect.py --weights weights/yolov3_quant_fix_reshape.tflite` 
 to detect objects in an image.
