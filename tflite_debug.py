@@ -1,54 +1,40 @@
+import tflite
 from tflite import Model
 import pdb
 
 
-buf = open('weights/int32.tflite', 'rb').read()
+buf = open('weights/yolov3_quant.tflite', 'rb').read()
 model = Model.GetRootAsModel(buf, 0)
 subgraph = model.Subgraphs(0)
-print(dir(subgraph))
-print(subgraph.OperatorsLength())
+# print(dir(subgraph))
+print('subgraph.OperatorsLength()', subgraph.OperatorsLength())
 
 n_ops = subgraph.OperatorsLength() 
-# n_adds = 0
-# for i_op in range(n_ops):
-#     op = subgraph.Operators(i_op)
-#     # Opcode for ADD
-#     if op.OpcodeIndex() == 0:
-#         print(i_op)
-#         n_adds += 1
-# for i_op in range(n_ops):
-#     op = subgraph.Operators(i_op)
-
-i_op = 439
-op = subgraph.Operators(i_op)
-pdb.set_trace()
-
+print('n_ops', n_ops)
+i_op = 0
+# op = subgraph.Operators(i_op)
+# print("Inputs", op.Inputs(0), op.Inputs(1))
+# print(op.BuiltinOptionsType())
+# assert(op.BuiltinOptionsType() == tflite.BuiltinOptions.ReshapeOptions)
 for i_op in range(n_ops):
     op = subgraph.Operators(i_op)
+    if op.BuiltinOptionsType() == tflite.BuiltinOptions.ReshapeOptions:
+        print(i_op)
+        i_out = op.Outputs(0)
+        out = subgraph.Tensors(i_out) 
+        print('out', out.Name())
+        op_opt = op.BuiltinOptions()
+        opt = tflite.ReshapeOptions()
+        opt.Init(op_opt.Bytes, op_opt.Pos)
+        print(opt.NewShapeAsNumpy())
 
-    # print(op.InputsAsNumpy())
-    # print(op.OutputsAsNumpy())
+# print(op.BuiltinOptions())
+# print(0, "Offset", table.Offset(0))
+# print(dir(op))
+# print(1, "Offset", table.Offset(1))
+# print(2, "Offset", table.Offset(2))
+# print(3, "Offset", table.Offset(3))
+# print(dir(op))
 
-    # i_in1, i_in2 = op.InputsAsNumpy()
-    i_out1 = op.OutputsAsNumpy()[0]
+# print(tensor.Name())
 
-    # i_in1 = 69
-    # in1 = subgraph.Tensors(i_in1)
-    # print(dir(in1))
-    # print(in1.Type())
-
-    # i_in2 = 269
-    # in2 = subgraph.Tensors(i_in2)
-    # print(in2.Type())
-
-    # i_out1 = 287
-    out1 = subgraph.Tensors(i_out1)
-    # print(out1.Type())
-    if out1.Type() != 0:
-        print(op.OpcodeIndex(), out1.Type(), i_out1)
-
-	
-# Check tensor.Name() to find the tensor_idx you want
-# tensor = subgraph.Tensors(0) 
-# buffer_idx = tensor.Buffer()
-# buffer = model.Buffers(buffer_idx)
