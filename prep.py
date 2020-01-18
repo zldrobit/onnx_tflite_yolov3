@@ -7,6 +7,7 @@ import pdb
 
 tf.reset_default_graph()
 graph_def = tf.GraphDef()
+del_nodes = []
 with tf.Session() as sess:
     # Read binary pb graph from file
     with tf.gfile.Open(graph_def_file, "rb") as f:
@@ -53,10 +54,11 @@ with tf.Session() as sess:
                 if n_org.outputs[0] == nam:
                     out._update_input(j, out_trans)
 
-    # Delete old nodes
-    graph_def = sess.graph.as_graph_def()
-    for on in conv_nodes:
-        graph_def.node.remove(on.node_def)
+    conv_names = [n.name for n in conv_nodes]
+    conv_node_def = [n for n in graph_def.node if n.name in conv_names] 
+
+    # Add conv_nodes to delete
+    del_nodes.extend([n.node_def for n in conv_nodes])
 
     # Change T:Int64 Add AddV2 to T:Int32 
     add_nodes = [n for n in sess.graph.get_operations() if n.type in ['Add','AddV2'] and n.node_def.attr['T'].type == 9]
@@ -73,14 +75,8 @@ with tf.Session() as sess:
         atts = n_org.node_def.attr
 
         # Int32 Add operation
-        # atts['T'].CopyFrom(tf.AttrValue(type=3))
-        # atts['T'] = tf.AttrValue(type=3)
-        # atts['T'].type does not accept DType
-        # atts['T'].type = tf.int32
-        # atts['T'].type = 3
         atts['T'].type = types_pb2.DT_INT32
         
-
         # Create new Operation
         op = sess.graph.create_op(op_type=n_org.type, inputs=inp_tens, name=n_org.name+'_new', attrs=atts) 
         
@@ -94,10 +90,8 @@ with tf.Session() as sess:
                 if n_org.outputs[0] == nam:
                     out._update_input(j, out_tens)
 
-    # Delete old nodes
-    graph_def = sess.graph.as_graph_def()
-    for on in add_nodes:
-        graph_def.node.remove(on.node_def)
+    # Add add_nodes to delete
+    del_nodes.extend([n.node_def for n in add_nodes])
 
     # Change Tshape:Int64 Reshape to Tshape:Int32
     reshape_nodes = [n for n in sess.graph.get_operations() if n.type in ['Reshape'] and n.node_def.attr['Tshape'].type == 9]
@@ -115,7 +109,6 @@ with tf.Session() as sess:
         atts = n_org.node_def.attr
         # atts['T'].type does not accept DType
         # atts['Tshape'].type = tf.int32
-        # atts['Tshape'].type = 3
         atts['Tshape'].type = types_pb2.DT_INT32
 
         # Create new Operation
@@ -136,9 +129,13 @@ with tf.Session() as sess:
     # reshape_nodes_after = [n for n in sess.graph.get_operations() if n.name in reshape_names] 
     graph_def = sess.graph.as_graph_def()
     reshape_node_def = [n for n in graph_def.node if n.name in reshape_names] 
-    for on_node_def in reshape_node_def:
-        graph_def.node.remove(on_node_def)
+    del_nodes.extend(reshape_node_def)
 
+    # Delete nodes
+    for on in del_nodes:
+        graph_def.node.remove(on)
+
+    # reshape_nodes = [n for n in graph_def.node if 'reshape' in n.name.lower()]
+    
     # Write graph
     tf.io.write_graph(graph_def, "", graph_def_file.rsplit('.', 1)[0]+'_prep.pb', as_text=False)
-
