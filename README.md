@@ -104,7 +104,7 @@ and `tflite_debug.py`.
 
 ## Known Issues
 - **The conversion code does not work with tensorflow==1.14.0:** Running prep.py cause protobuf error (Channel order issue in Conv2D).
-- **fix_shape.py does not fix shape attributes in TFLite tensors, which may cause unknown side effects.**
+- **fix_reshape.py does not fix shape attributes in TFLite tensors, which may cause unknown side effects.**
 
 ## TODO
 - [x] **support quantized model**
