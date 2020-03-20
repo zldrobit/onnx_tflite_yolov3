@@ -160,7 +160,9 @@ class YOLOLayer(nn.Module):
 
     def forward(self, p, img_size, var=None):
         if ONNX_EXPORT:
-            bs = 1  # batch size
+            # bs = 1  # batch size
+            # dynamic batch size for ONNX batch inference
+            bs = p.shape[0]
         else:
             bs, _, ny, nx = p.shape  # bs, 255, 13, 13
             if (self.nx, self.ny) != (nx, ny):
@@ -259,7 +261,10 @@ class Darknet(nn.Module):
             for _io in io:
                 print("_io.shape", _io.shape)
             # print("p.shape", p.shape)
-            return torch.cat(io, 1), p
+            if ONNX_EXPORT:
+                return torch.cat(io, 1)
+            else:
+                return torch.cat(io, 1), p
 
     def fuse(self):
         # Fuse Conv2d + BatchNorm2d layers throughout model
