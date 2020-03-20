@@ -45,7 +45,12 @@ def detect(save_txt=False, save_img=False):
     # Export mode
     if ONNX_EXPORT:
         img = torch.zeros((1, 3) + img_size)  # (1, 3, 320, 192)
-        torch.onnx.export(model, img, 'weights/export.onnx', verbose=True, opset_version=9)
+        input_names = ['input_1']
+        output_names = ['output_1']
+        torch.onnx.export(
+            model, img, 'weights/export.onnx', verbose=False, opset_version=9,
+            input_names=input_names, output_names=output_names,
+            dynamic_axes={'input_1': {0: 'batch_size'}, 'output_1': {0: 'batch_size'}})
 
         # Validate exported model
         import onnx
