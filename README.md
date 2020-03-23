@@ -39,7 +39,7 @@ and `tflite_debug.py`.
 - **fix_reshape.py does not fix shape attributes in TFLite tensors, which may cause unknown side effects.**
 
 ## TODO
-- [ ] **support conversion to TensorFlow model**
+- [ ] **support conversion to TensorFlow model (related to [onnx-tensorflow Slice Op](https://github.com/onnx/onnx-tensorflow/issues/464))**
 
 ## Acknowledgement
 We borrow PyTorch code from [ultralytics/yolov3](https://github.com/ultralytics/yolov3), 
