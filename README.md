@@ -50,7 +50,7 @@ and `tflite_debug.py`.
 
 ## TODO
 - [x] **Add TensorRT support (see [onnx-tensorrt dynamic shape](https://github.com/onnx/onnx-tensorrt/issues/328) )**
-- [ ] **Add TensorRT int8 calibration**
+- [ ] **Add TensorRT int8 calibration (see [onnx-tensorrt INT8 calibration](https://github.com/NVIDIA/TensorRT/issues/289))**
 - [ ] **support conversion to TensorFlow model (related to [onnx-tensorflow Slice Op](https://github.com/onnx/onnx-tensorflow/issues/464))**
 
 ## Acknowledgement
