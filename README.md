@@ -28,6 +28,16 @@ python3 detect.py --cfg cfg/yolov3.cfg --weights weights/yolov3.weights
 ```
 The output ONNX file is `weights/export.onnx`. The input name is `input_1`. The output name is `output_1`.
 
+- **3. (TensorRT) Convert ONNX model to TensorRT Engine file:**
+```
+# You'll need an nVidia NGC's account
+docker pull docker pull nvcr.io/nvidia/tensorrt:20.03-py3
+```
+and run in docker:
+```
+bash run_trtexec.sh
+```
+
 ## Auxiliary Files
 - **ONNX inference and detection:** `onnx_infer.py` and `onnx_detect.py`.
 - **TensorFlow inference and detection:** `tf_infer.py` and `tf_detect.py`.
@@ -39,9 +49,12 @@ and `tflite_debug.py`.
 - **fix_reshape.py does not fix shape attributes in TFLite tensors, which may cause unknown side effects.**
 
 ## TODO
+- [x] **Add TensorRT support (see [onnx-tensorrt dynamic shape](https://github.com/onnx/onnx-tensorrt/issues/328) )**
+- [ ] **Add TensorRT int8 calibration **
 - [ ] **support conversion to TensorFlow model (related to [onnx-tensorflow Slice Op](https://github.com/onnx/onnx-tensorflow/issues/464))**
 
 ## Acknowledgement
 We borrow PyTorch code from [ultralytics/yolov3](https://github.com/ultralytics/yolov3), 
 and TensorFlow low-level API conversion code from [paulbauriegel/tensorflow-tools](https://github.com/paulbauriegel/tensorflow-tools).
+[tensorrt-utils](https://github.com/rmccorm4/tensorrt-utils) is of great help in converting ONNX to TensorRT conversion.
   
