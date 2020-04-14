@@ -56,5 +56,5 @@ and `tflite_debug.py`.
 ## Acknowledgement
 We borrow PyTorch code from [ultralytics/yolov3](https://github.com/ultralytics/yolov3), 
 and TensorFlow low-level API conversion code from [paulbauriegel/tensorflow-tools](https://github.com/paulbauriegel/tensorflow-tools).
-[tensorrt-utils](https://github.com/rmccorm4/tensorrt-utils) is of great help in converting ONNX to TensorRT conversion.
+[tensorrt-utils](https://github.com/rmccorm4/tensorrt-utils) is of great help in ONNX to TensorRT conversion.
   
