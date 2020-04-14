@@ -232,8 +232,11 @@ class Darknet(nn.Module):
 
         for i, (mdef, module) in enumerate(zip(self.module_defs, self.module_list)):
             mtype = mdef['type']
-            if mtype in ['convolutional', 'upsample', 'maxpool']:
+            if mtype in ['convolutional', 'maxpool']:
                 x = module(x)
+            # add onnx tensorrt conversion support: use size instead of scale_factor in upsample
+            elif mtype in ['upsample']:
+                x = F.interpolate(x, int(x.shape[2]) * int(module.scale_factor), None, module.mode, module.align_corners)
             elif mtype == 'route':
                 layers = [int(x) for x in mdef['layers'].split(',')]
                 if len(layers) == 1:
