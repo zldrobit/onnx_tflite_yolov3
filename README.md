@@ -31,7 +31,7 @@ The output ONNX file is `weights/export.onnx`. The input name is `input_1`. The 
 - **3. (TensorRT) Convert ONNX model to TensorRT Engine file:**
 ```
 # You'll need an nVidia NGC's account
-docker pull docker pull nvcr.io/nvidia/tensorrt:20.03-py3
+docker pull nvcr.io/nvidia/tensorrt:20.03-py3
 ```
 and run in docker:
 ```
@@ -50,7 +50,7 @@ and `tflite_debug.py`.
 
 ## TODO
 - [x] **Add TensorRT support (see [onnx-tensorrt dynamic shape](https://github.com/onnx/onnx-tensorrt/issues/328) )**
-- [ ] **Add TensorRT int8 calibration **
+- [ ] **Add TensorRT int8 calibration**
 - [ ] **support conversion to TensorFlow model (related to [onnx-tensorflow Slice Op](https://github.com/onnx/onnx-tensorflow/issues/464))**
 
 ## Acknowledgement
