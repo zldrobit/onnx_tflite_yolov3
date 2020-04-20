@@ -38,6 +38,12 @@ and run in docker:
 bash run_trtexec.sh
 ```
 
+- **4. (TensorRT) Detect objects in image:**
+```
+# in TensorRT Docker (you may need to install torch, torchvision, matplotlib, opencv-python, tqdm)
+python trt_detect.py
+```
+
 ## Auxiliary Files
 - **ONNX inference and detection:** `onnx_infer.py` and `onnx_detect.py`.
 - **TensorFlow inference and detection:** `tf_infer.py` and `tf_detect.py`.
