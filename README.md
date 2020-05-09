@@ -106,7 +106,7 @@ and `tflite_debug.py`.
 - **fix_reshape.py does not fix shape attributes in TFLite tensors, which may cause unknown side effects.**
 
 ## TODO
-- [x] **support quantized model**
+- [x] **support tflite quantized model**
 - [x] **use dynamic_axes for ONNX export to support dynamic batching and TensorRT conversion (dynamic_axes branch)**
 
 ## Acknowledgement
