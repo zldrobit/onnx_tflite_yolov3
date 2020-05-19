@@ -125,6 +125,7 @@ def get_trt_plugin(plugin_name, plugin_args):
                 bnms_score_threshold_field = trt.PluginField("scoreThreshold", np.array([plugin_args.score_threshold], dtype=np.float32), trt.PluginFieldType.FLOAT32)
                 bnms_iou_threshold_field = trt.PluginField("iouThreshold", np.array([plugin_args.iou_threshold], dtype=np.float32), trt.PluginFieldType.FLOAT32)
                 bnms_is_normalized_field = trt.PluginField("isNormalized", np.array([plugin_args.is_normalized], dtype=np.bool), trt.PluginFieldType.INT32)
+                bnms_clip_boxes_field = trt.PluginField("clipBoxes", np.array([plugin_args.clip_boxes], dtype=np.bool), trt.PluginFieldType.INT32)
                 field_collection = trt.PluginFieldCollection([
                     bnms_share_location_field,
                     bnms_background_label_id_field,
@@ -134,6 +135,7 @@ def get_trt_plugin(plugin_name, plugin_args):
                     bnms_score_threshold_field,
                     bnms_iou_threshold_field,
                     bnms_is_normalized_field,
+                    bnms_clip_boxes_field
                 ])
                 plugin = plugin_creator.create_plugin(name=plugin_name, field_collection=field_collection)
         return plugin
@@ -241,6 +243,7 @@ def main():
             plugin_args.score_threshold = 0.3
             plugin_args.iou_threshold = 0.5
             plugin_args.is_normalized = 0
+            plugin_args.clip_boxes = False
             boxes_1 = network.get_output(0)
             print('boxes_1.shape', boxes_1.shape)
             # see https://github.com/NVIDIA/TensorRT/issues/166 for TensorRT reshape op

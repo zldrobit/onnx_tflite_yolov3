@@ -120,6 +120,7 @@ def get_trt_plugin(plugin_name):
                     bnms_score_threshold_field,
                     bnms_iou_threshold_field,
                     bnms_is_normalized_field,
+                    bnms_clip_boxes_field
                 ])
                 plugin = plugin_creator.create_plugin(name=plugin_name, field_collection=field_collection)
         return plugin
