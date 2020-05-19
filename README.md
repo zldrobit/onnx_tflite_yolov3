@@ -12,9 +12,12 @@ A Conversion tool to convert YOLO v3 Darknet weights to TF Lite model
 - `tensorflow-gpu==1.15.0`
 
 ## Docker
-`docker pull zldrobit/onnx:10.0-cudnn7-devel-pytorch-1.5`
-# You'll need an nVidia NGC's account
-`docker pull nvcr.io/nvidia/tensorrt:20.03-py3`
+```
+docker pull zldrobit/onnx:10.0-cudnn7-devel-pytorch-1.5
+
+# You'll need an nVidia NGC's account, run docker login before pulling
+docker pull nvcr.io/nvidia/tensorrt:20.03-py3
+```
 
 ## Usage
 - **1. Download pretrained Darknet weights:**
