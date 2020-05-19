@@ -44,19 +44,34 @@ def detect(save_txt=False, save_img=False):
 
     # Export mode
     if ONNX_EXPORT:
-        img = torch.zeros((1, 3) + img_size)  # (1, 3, 320, 192)
-        input_names = ['input_1']
-        output_names = ['output_1']
-        torch.onnx.export(
-            model, img, 'weights/export.onnx', verbose=False, opset_version=9,
-            input_names=input_names, output_names=output_names,
-            dynamic_axes={'input_1': {0: 'batch_size'}, 'output_1': {0: 'batch_size'}})
-
-        # Validate exported model
         import onnx
-        model = onnx.load('weights/export.onnx')  # Load the ONNX model
+        img = torch.zeros((1, 3) + img_size)  # (1, 3, 320, 192)
+        if TRT_NMS:
+            input_names = ['input_1']
+            output_names = ['boxes_1', 'scores_1']
+            torch.onnx.export(
+                model, img, 'weights/export_trt_nms.onnx', verbose=False, opset_version=9,
+                input_names=input_names, output_names=output_names,
+                dynamic_axes={'input_1': {0: 'batch_size'},
+                              'boxes_1': {0: 'batch_size'},
+                              'scores_1': {0: 'batch_size'}})
+
+            # Validate exported model
+            model = onnx.load('weights/export_trt_nms.onnx')  # Load the ONNX model
+
+        else:
+            input_names = ['input_1']
+            output_names = ['output_1']
+            torch.onnx.export(
+                model, img, 'weights/export_dynamic_axes.onnx', verbose=False, opset_version=9,
+                input_names=input_names, output_names=output_names,
+                dynamic_axes={'input_1': {0: 'batch_size'}, 'output_1': {0: 'batch_size'}})
+
+            # Validate exported model
+            model = onnx.load('weights/export.onnx')  # Load the ONNX model
+
         onnx.checker.check_model(model)  # Check that the IR is well formed
-        # print(onnx.helper.printable_graph(model.graph))  # Print a human readable representation of the graph
+        print(onnx.helper.printable_graph(model.graph))  # Print a human readable representation of the graph
         return
 
     # Half precision

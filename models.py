@@ -4,6 +4,7 @@ from utils.parse_config import *
 from utils.utils import *
 
 ONNX_EXPORT = True
+TRT_NMS = True
 
 
 def create_modules(module_defs, img_size, arc):
@@ -265,7 +266,25 @@ class Darknet(nn.Module):
                 print("_io.shape", _io.shape)
             # print("p.shape", p.shape)
             if ONNX_EXPORT:
-                return torch.cat(io, 1)
+                if TRT_NMS:
+                    t = torch.cat(io, 1)
+                    xywh = t[:, :, :4]
+                    boxes = torch.zeros_like(xywh)
+                    xmin = xywh[:, :, 0:1] - xywh[:, :, 2:3] / 2
+                    ymin = xywh[:, :, 1:2] - xywh[:, :, 3:4] / 2
+                    xmax = xywh[:, :, 0:1] + xywh[:, :, 2:3] / 2
+                    ymax = xywh[:, :, 1:2] + xywh[:, :, 3:4] / 2
+                    # boxes[:, :, 0] = xmin
+                    # boxes[:, :, 1] = ymin
+                    # boxes[:, :, 2] = xmax
+                    # boxes[:, :, 3] = ymax
+                    boxes = torch.cat((xmin, ymin, xmax, ymax), 2)
+                    boxes = torch.unsqueeze(boxes, 2)
+                    p = t[:, :, 4:5]
+                    scores = p * t[:, :, 5:]
+                    return boxes, scores
+                else:
+                    return torch.cat(io, 1)
             else:
                 return torch.cat(io, 1), p
 
