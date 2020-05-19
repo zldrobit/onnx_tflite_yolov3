@@ -38,11 +38,15 @@ def allocate_buffers(engine: trt.ICudaEngine, batch_size: int):
     inputs = []
     outputs = []
     dbindings = []
+    global output_dict
+    output_dict = dict()
 
     stream = cuda.Stream()
 
-    for binding in engine:
+    for i, binding in enumerate(engine):
         # size = batch_size * trt.volume(-1 * engine.get_binding_shape(binding))
+        output_name = engine.get_binding_name(i)
+        print("binding %d's name: %s" % (i, engine.get_binding_name(i)))
         size = batch_size * trt.volume(engine.get_binding_shape(binding)[1:])
         # print('size', size)
         print('shape', engine.get_binding_shape(binding))
@@ -60,6 +64,7 @@ def allocate_buffers(engine: trt.ICudaEngine, batch_size: int):
             inputs.append(HostDeviceMem(host_mem, device_mem))
         else:
             outputs.append(HostDeviceMem(host_mem, device_mem))
+            output_dict[output_name] = host_mem
 
     return inputs, outputs, dbindings, stream
 
@@ -150,13 +155,16 @@ def detect(save_txt=False, save_img=False):
                 keep_topk = 100
                 num_classes = 80
                 cuda.memcpy_dtoh(outputs[0].host, outputs[0].device)
-                num_detections = np.reshape(np.array(outputs[0].host), [batch_size])
                 cuda.memcpy_dtoh(outputs[1].host, outputs[1].device)
-                nmsed_boxes = np.reshape(np.array(outputs[1].host), [batch_size, keep_topk, 4])
                 cuda.memcpy_dtoh(outputs[2].host, outputs[2].device)
-                nmsed_scores = np.reshape(np.array(outputs[2].host), [batch_size, keep_topk])
                 cuda.memcpy_dtoh(outputs[3].host, outputs[3].device)
-                nmsed_classes = np.reshape(np.array(outputs[3].host), [batch_size, keep_topk])
+                num_detections = np.reshape(np.array(output_dict['num_detections_reshaped']), [batch_size])
+                nmsed_boxes = np.reshape(np.array(output_dict['nmsed_boxes']),
+                        [batch_size, keep_topk, 4])
+                nmsed_scores = np.reshape(np.array(output_dict['nmsed_scores']),
+                        [batch_size, keep_topk])
+                nmsed_classes = np.reshape(np.array(output_dict['nmsed_classes']),
+                        [batch_size, keep_topk])
 
                 # print('num_detections', num_detections)
 
