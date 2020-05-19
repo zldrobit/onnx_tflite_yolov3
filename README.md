@@ -27,6 +27,7 @@ wget https://pjreddie.com/media/files/yolov3.weights
 ```
 
 - **2. Convert YOLO v3 model from Darknet weights to ONNX model (in ONNX docker):** 
+
 Change `ONNX_EXPORT` and `TRT_NMS` to `True` in `models.py`. Run 
 ```
 python3 detect.py --cfg cfg/yolov3.cfg --weights weights/yolov3.weights
