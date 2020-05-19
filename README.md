@@ -31,6 +31,7 @@ python3 detect.py --cfg cfg/yolov3.cfg --weights weights/yolov3.weights
 The output ONNX file is `weights/export_trt_nms.onnx`. The input name is `input_1`. The output names are `boxes_1` and `scores_1`.
 
 - **3. Build TensorRT batchedNMSPlugin with dynamic batch size support and overwrite the older plugin file (in TensorRT docker):**
+
 Issue about batchedNMSPlugin with dynamic batch size: 
 [Will BatchedNMS Plugin support runtime input dimensions (IPluginV2DynamicExt)?](https://github.com/NVIDIA/TensorRT/issues/544)
 ```
