@@ -47,6 +47,7 @@ cd build
 cmake ..
 make nvinfer_plugin
 cp libnvinfer_plugin.so.7.0.0 /usr/lib/x86_64-linux-gnu/libnvinfer_plugin.so.7.0.0
+ldconfig
 ```
 
 - **4. Convert ONNX model to TensorRT Engine file (in TensorRT docker):**
