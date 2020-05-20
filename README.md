@@ -108,6 +108,7 @@ and `tflite_debug.py`.
 ## TODO
 - [x] **support tflite quantized model**
 - [x] **use dynamic_axes for ONNX export to support dynamic batching and TensorRT conversion (dynamic_axes branch)**
+- [x] **add TensorRT NMS support (trt_nms branch)**
 
 ## Acknowledgement
 We borrow PyTorch code from [ultralytics/yolov3](https://github.com/ultralytics/yolov3), 
