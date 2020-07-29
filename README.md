@@ -50,7 +50,7 @@ toco --graph_def_file weights/yolov3_prep.pb \
     --output_arrays concat_84
 ```
 The output file is `weights/yolov3.tflite`.
-Now, you can run `python3 tflite_detect.py` to detect objects in an image.
+Now, you can run `python3 tflite_detect.py --weights weights/yolov3.tflite` to detect objects in an image.
 
 ## Quantization
 - **1. Install flatbuffers:**
