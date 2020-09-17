@@ -5,12 +5,15 @@ graph_def_file = "weights/yolov3.pb"
 
 import pdb
 
-tf.reset_default_graph()
-graph_def = tf.GraphDef()
+#tf.reset_default_graph()
+tf.compat.v1.reset_default_graph()
+
+#graph_def = tf.GraphDef()
+graph_def = tf.compat.v1.GraphDef()
 del_nodes = []
-with tf.Session() as sess:
+with tf.compat.v1.Session() as sess:
     # Read binary pb graph from file
-    with tf.gfile.Open(graph_def_file, "rb") as f:
+    with tf.compat.v2.io.gfile.GFile(graph_def_file, "rb") as f:
         data2read = f.read()
         graph_def.ParseFromString(data2read)
     tf.graph_util.import_graph_def(graph_def, name='')
