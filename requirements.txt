@@ -23,7 +23,7 @@ onnxruntime-gpu==1.0.0
 opencv-python==4.1.2.30
 opt-einsum==3.1.0
 Pillow==6.2.1
-protobuf==3.11.1
+protobuf==3.18.3
 pycrypto==2.6.1
 pygobject==3.26.1
 pyparsing==2.4.5
